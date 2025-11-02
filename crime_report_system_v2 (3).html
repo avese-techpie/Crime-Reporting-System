@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Report Crime - NCD & Central Province</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 600px;
+            width: 100%;
+            overflow: hidden;
+            animation: slideUp 0.5s ease;
+        }
+        
+        @keyframes slideUp {
+            from {
+                transform: translateY(50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .alert-banner {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px;
+            border-radius: 5px;
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(-20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .alert-banner.show {
+            display: block;
+        }
+        
+        .alert-banner.success {
+            background: #d4edda;
+            border-left-color: #28a745;
+            color: #155724;
+        }
+        
+        .alert-banner.error {
+            background: #f8d7da;
+            border-left-color: #dc3545;
+            color: #721c24;
+        }
+        
+        .alert-banner.info {
+            background: #d1ecf1;
+            border-left-color: #17a2b8;
+            color: #0c5460;
+        }
+        
+        .form-container {
+            padding: 30px;
+        }
+        
+        .location-status {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 25px;
+            text-align: center;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .location-status.requesting {
+            border-color: #ffc107;
+            animation: pulse 2s infinite;
+        }
+        
+        .location-status.success {
+            border-color: #28a745;
+        }
+        
+        .location-status.error {
+            border-color: #dc3545;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .location-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        
+        .location-text {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        .location-coords {
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #2a5298;
+            font-weight: 600;
+        }
+        
+        .location-district {
+            font-size: 12px;
+            color: #666;
+            margin-top: 8px;
+            padding: 5px 10px;
+            background: #e7f3ff;
+            border-radius: 5px;
+            display: inline-block;
+        }
+        
+        .timer {
+            background: #e74c3c;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 18px;
+            font-weight: 700;
+            display: inline-block;
+            margin-top: 10px;
+        }
+        
+        .timer.warning {
+            background: #f39c12;
+            animation: pulseTimer 1s infinite;
+        }
+        
+        @keyframes pulseTimer {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+            font-size: 14px;
+        }
+        
+        .form-group label .required {
+            color: #e74c3c;
+        }
+        
+        .form-group select,
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.3s;
+        }
+        
+        .form-group select:focus,
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #2a5298;
+            box-shadow: 0 0 0 3px rgba(42, 82, 152, 0.1);
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .file-upload {
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+        
+        .file-upload:hover {
+            border-color: #2a5298;
+            background: #f8f9fa;
+        }
+        
+        .file-upload input {
+            display: none;
+        }
+        
+        .file-upload-icon {
+            font-size: 48px;
+            color: #2a5298;
+            margin-bottom: 10px;
+        }
+        
+        .file-upload-text {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .file-upload-limit {
+            font-size: 12px;
+            color: #999;
+            margin-top: 5px;
+        }
+        
+        .file-preview {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: none;
+        }
+        
+        .file-preview.show {
+            display: block;
+        }
+        
+        .file-preview img,
+        .file-preview video {
+            max-width: 100%;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .file-name {
+            flex: 1;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .file-remove {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 5px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            margin-top: 10px;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .loading.show {
+            display: block;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #2a5298;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .success-screen {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .success-screen.show {
+            display: block;
+        }
+        
+        .success-icon {
+            font-size: 80px;
+            color: #28a745;
+            margin-bottom: 20px;
+        }
+        
+        .success-screen h2 {
+            color: #28a745;
+            margin-bottom: 15px;
+        }
+        
+        .success-screen p {
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        .reference-number {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 18px;
+            font-weight: 700;
+            color: #2a5298;
+        }
+        
+        .station-info {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            text-align: left;
+        }
+        
+        .station-info strong {
+            display: block;
+            color: #2a5298;
+            margin-bottom: 5px;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                border-radius: 0;
+            }
+            
+            .header h1 {
+                font-size: 22px;
+            }
+            
+            .form-container {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚨 Report Crime/Incident</h1>
+            <p>NCD & Central Province - Papua New Guinea</p>
+        </div>
+        
+        <div id="alertBanner" class="alert-banner"></div>
+        
+        <div id="formSection" class="form-container">
+            <div class="location-status requesting" id="locationStatus">
+                <div class="location-icon" id="locationIcon">📍</div>
+                <div class="location-text" id="locationText">Waiting for your location...</div>
+                <div class="location-coords" id="locationCoords"></div>
+                <div class="location-district" id="locationDistrict" style="display: none;"></div>
+                <div style="background: #fff3cd; padding: 10px; border-radius: 5px; margin-top: 10px; font-size: 12px; color: #856404;">
+                    <strong>⚠️ Important:</strong> Your browser will ask "Allow location?" - Please click <strong>ALLOW</strong>. This helps police find the exact incident location on their map.
+                </div>
+                <button type="button" onclick="requestLocation()" style="margin-top: 10px; padding: 8px 16px; background: #2a5298; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 13px; font-weight: 600;">
+                    🔄 Try Again
+                </button>
+                <div class="timer" id="timer">5:00</div>
+            </div>
+            
+            <form id="crimeReportForm">
+                <div class="form-group">
+                    <label>Crime/Incident Type <span class="required">*</span></label>
+                    <select id="crimeType" required>
+                        <option value="">Select type of crime/incident</option>
+                        <option value="violence">Violence against civilians</option>
+                        <option value="assault">Assault</option>
+                        <option value="theft">Theft/Robbery</option>
+                        <option value="burglary">Burglary</option>
+                        <option value="vehicle_theft">Vehicle Theft</option>
+                        <option value="domestic_violence">Domestic Violence</option>
+                        <option value="sexual_assault">Sexual Assault</option>
+                        <option value="murder">Murder/Homicide</option>
+                        <option value="riots">Riot</option>
+                        <option value="protests">Protest</option>
+                        <option value="fire">Fire</option>
+                        <option value="accident">Traffic Accident</option>
+                        <option value="drug">Drug-related</option>
+                        <option value="vandalism">Vandalism</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Brief Description <span class="required">*</span></label>
+                    <textarea id="description" required placeholder="Describe what happened, who is involved, what you witnessed..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>Upload Photo or Video (Max 3 minutes for video)</label>
+                    <div class="file-upload" onclick="document.getElementById('fileInput').click()">
+                        <div class="file-upload-icon">📷</div>
+                        <div class="file-upload-text">Click to upload photo or video</div>
+                        <div class="file-upload-limit">Max size: 50MB | Video: 3 minutes max</div>
+                        <input type="file" id="fileInput" accept="image/*,video/*" onchange="handleFileSelect(event)">
+                    </div>
+                    <div id="filePreview" class="file-preview"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Your Contact Number (Optional but recommended)</label>
+                    <input type="tel" id="contactNumber" placeholder="e.g., 7XXXXXXX">
+                </div>
+                
+                <button type="submit" class="btn btn-primary" id="submitBtn" disabled>
+                    📤 Submit Report
+                </button>
+                
+                <button type="button" class="btn btn-secondary" onclick="window.location.reload()">
+                    ↩️ Cancel
+                </button>
+                
+                <button type="button" class="btn btn-secondary" onclick="checkStorage()" style="margin-top: 10px; background: #17a2b8;">
+                    🔍 Check Storage (Debug)
+                </button>
+            </form>
+        </div>
+        
+        <div id="loadingSection" class="loading">
+            <div class="spinner"></div>
+            <h3>Submitting your report...</h3>
+            <p>Please wait while we process your information</p>
+        </div>
+        
+        <div id="successSection" class="success-screen">
+            <div class="success-icon">✅</div>
+            <h2>Report Submitted Successfully!</h2>
+            <p>Thank you for reporting this incident. Your information has been sent to the station commander and is now visible on the police dashboard.</p>
+            <div class="reference-number">
+                Reference: <span id="referenceNumber"></span>
+            </div>
+            <div class="station-info">
+                <strong>📍 Assigned to:</strong>
+                <div id="assignedStation"></div>
+                <div id="assignedCommander"></div>
+                <div id="assignedPhone"></div>
+            </div>
+            <button class="btn btn-primary" onclick="window.location.reload()" style="margin-top: 20px;">
+                Report Another Incident
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Police station data
+        const policeStations = {
+            '7mile': { name: '7 Mile Police Station', commander: 'Insp. Henry Map', phone: '72272753', lat: -9.4800, lng: 147.1400 },
+            'waigani': { name: 'Waigani Police Station', commander: 'Chf. Sgt. Mark Makeso', phone: '73819673', lat: -9.4167, lng: 147.1833 },
+            'gerehu': { name: 'Gerehu Police Station', commander: 'Insp. Hamson Tokally', phone: '71509472', lat: -9.4500, lng: 147.1300 },
+            'hohola': { name: 'Hohola Police Station', commander: 'Snr. Insp. Jeffery Simewa', phone: '71604385', lat: -9.4600, lng: 147.1600 },
+            'badili': { name: 'Badili Police Station', commander: 'Chf. Sgt. Abel Andrew', phone: '71604950', lat: -9.4700, lng: 147.1700 },
+            'pmtown': { name: 'Port Moresby Town Police Station', commander: 'Chf. Sgt. Tonny Morgan', phone: '70353532', lat: -9.4647, lng: 147.1925 },
+            '6mile': { name: '6 Mile Police Station', commander: 'Insp. Bruce Amos', phone: '70226474', lat: -9.4700, lng: 147.1500 },
+            'boroko': { name: 'Boroko Police Station', commander: 'Insp. Benjamin Wiai', phone: '72513578', lat: -9.4500, lng: 147.1800 },
+            '9mile': { name: '9 Mile Police Station', commander: 'Insp. Leonard Wiai', phone: '72207679', lat: -9.4900, lng: 147.1200 },
+            'gordons': { name: 'Gordons Police Station', commander: 'Snr. Insp. Gabriel Kini', phone: '72704782', lat: -9.4600, lng: 147.1900 }
+        };
+        
+        // Global variables
+        let userLocation = null;
+        let timeRemaining = 300;
+        let timerInterval = null;
+        let selectedFile = null;
+        
+        // Initialize - automatically request location on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            showAlert('📍 Your browser will ask to use your location. Please click ALLOW so police can find the incident.', 'info');
+            
+            // Small delay to ensure UI is ready
+            setTimeout(() => {
+                requestLocation();
+            }, 1000);
+            
+            startTimer();
+        });
+        
+        // Request user location automatically
+        function requestLocation() {
+            const locationStatus = document.getElementById('locationStatus');
+            locationStatus.className = 'location-status requesting';
+            
+            document.getElementById('locationIcon').textContent = '📍';
+            document.getElementById('locationText').textContent = 'Getting your location...';
+            
+            if (!navigator.geolocation) {
+                showAlert('❌ Your browser does not support location. Please use Chrome, Firefox, or Safari on your phone.', 'error');
+                document.getElementById('locationIcon').textContent = '❌';
+                document.getElementById('locationText').textContent = 'Location not supported by this browser';
+                locationStatus.className = 'location-status error';
+                return;
+            }
+            
+            console.log('Requesting location from device...');
+            
+            navigator.geolocation.getCurrentPosition(
+                // SUCCESS - Location captured!
+                function(position) {
+                    console.log('✅ Location captured successfully!', position);
+                    
+                    userLocation = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude,
+                        accuracy: position.coords.accuracy
+                    };
+                    
+                    const locationStatus = document.getElementById('locationStatus');
+                    locationStatus.className = 'location-status success';
+                    
+                    document.getElementById('locationIcon').textContent = '✅';
+                    document.getElementById('locationText').textContent = '✅ Location Captured!';
+                    document.getElementById('locationCoords').textContent = 
+                        `Your location has been recorded (accurate to ${Math.round(userLocation.accuracy)} meters)`;
+                    
+                    const nearestStation = findNearestStation(userLocation.lat, userLocation.lng);
+                    const districtEl = document.getElementById('locationDistrict');
+                    districtEl.textContent = `📍 Nearest Police Station: ${nearestStation.name}`;
+                    districtEl.style.display = 'inline-block';
+                    
+                    showAlert('✅ Perfect! Your location is captured. Police will see this on their map. Now fill the form below.', 'success');
+                    document.getElementById('submitBtn').disabled = false;
+                    
+                    // Hide the try again button and warning
+                    const tryAgainBtn = document.querySelector('button[onclick="requestLocation()"]');
+                    if (tryAgainBtn) tryAgainBtn.style.display = 'none';
+                },
+                // ERROR - Location failed
+                function(error) {
+                    console.error('❌ Location error:', error);
+                    
+                    const locationStatus = document.getElementById('locationStatus');
+                    locationStatus.className = 'location-status error';
+                    
+                    document.getElementById('locationIcon').textContent = '❌';
+                    
+                    if (error.code === 1) {
+                        // User denied permission
+                        document.getElementById('locationText').textContent = '❌ Location Blocked';
+                        showAlert('🔴 You clicked BLOCK. Please click the "Try Again" button and click ALLOW when your browser asks for location.', 'error');
+                    } else if (error.code === 2) {
+                        // Location unavailable
+                        document.getElementById('locationText').textContent = '❌ Cannot Find Location';
+                        showAlert('🔴 Cannot get your location. Make sure Location/GPS is turned ON in your phone settings, then click "Try Again".', 'error');
+                    } else if (error.code === 3) {
+                        // Timeout
+                        document.getElementById('locationText').textContent = '❌ Taking Too Long';
+                        showAlert('🔴 Location request timed out. Please click "Try Again" button.', 'error');
+                    }
+                    
+                    // Keep submit button disabled - location is required
+                    document.getElementById('submitBtn').disabled = true;
+                },
+                {
+                    enableHighAccuracy: true,  // Use GPS for accurate location
+                    timeout: 30000,            // Wait up to 30 seconds
+                    maximumAge: 0              // Don't use cached location
+                }
+            );
+        }
+        
+        // Start timer
+        function startTimer() {
+            timerInterval = setInterval(function() {
+                timeRemaining--;
+                
+                const minutes = Math.floor(timeRemaining / 60);
+                const seconds = timeRemaining % 60;
+                const timerElement = document.getElementById('timer');
+                
+                timerElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                
+                if (timeRemaining <= 60) {
+                    timerElement.classList.add('warning');
+                }
+                
+                if (timeRemaining <= 0) {
+                    clearInterval(timerInterval);
+                    showAlert('⏰ Time expired! The form has been disabled. Please refresh to try again.', 'error');
+                    document.getElementById('submitBtn').disabled = true;
+                    document.getElementById('crimeReportForm').querySelectorAll('input, select, textarea').forEach(el => {
+                        el.disabled = true;
+                    });
+                }
+            }, 1000);
+        }
+        
+        // Handle file selection
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            if (file.size > 50 * 1024 * 1024) {
+                showAlert('File is too large. Maximum size is 50MB.', 'error');
+                return;
+            }
+            
+            if (file.type.startsWith('video/')) {
+                const video = document.createElement('video');
+                video.preload = 'metadata';
+                
+                video.onloadedmetadata = function() {
+                    window.URL.revokeObjectURL(video.src);
+                    if (video.duration > 180) {
+                        showAlert('Video is too long. Maximum duration is 3 minutes.', 'error');
+                        document.getElementById('fileInput').value = '';
+                        return;
+                    } else {
+                        displayFilePreview(file);
+                    }
+                };
+                
+                video.src = URL.createObjectURL(file);
+            } else {
+                displayFilePreview(file);
+            }
+            
+            selectedFile = file;
+        }
+        
+        // Display file preview
+        function displayFilePreview(file) {
+            const preview = document.getElementById('filePreview');
+            const fileType = file.type.startsWith('image/') ? 'image' : 'video';
+            
+            let content = `
+                <div class="file-info">
+                    <span class="file-name">${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)</span>
+                    <button type="button" class="file-remove" onclick="removeFile()">Remove</button>
+                </div>
+            `;
+            
+            if (fileType === 'image') {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    content += `<img src="${e.target.result}" alt="Preview">`;
+                    preview.innerHTML = content;
+                    preview.classList.add('show');
+                };
+                reader.readAsDataURL(file);
+            } else {
+                const videoURL = URL.createObjectURL(file);
+                content += `<video src="${videoURL}" controls></video>`;
+                preview.innerHTML = content;
+                preview.classList.add('show');
+            }
+        }
+        
+        // Remove file
+        function removeFile() {
+            selectedFile = null;
+            document.getElementById('fileInput').value = '';
+            document.getElementById('filePreview').classList.remove('show');
+            document.getElementById('filePreview').innerHTML = '';
+        }
+        
+        // Find nearest station
+        function findNearestStation(lat, lng) {
+            let nearest = null;
+            let minDistance = Infinity;
+            
+            Object.values(policeStations).forEach(station => {
+                const distance = getDistance(lat, lng, station.lat, station.lng);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    nearest = station;
+                }
+            });
+            
+            return nearest;
+        }
+        
+        // Calculate distance between two points
+        function getDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+        
+        // Form submission
+        document.getElementById('crimeReportForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (!userLocation) {
+                showAlert('❌ Location is required. Please click "Try Again" and allow location access.', 'error');
+                return;
+            }
+            
+            console.log('Submitting report with location:', userLocation);
+            
+            document.getElementById('formSection').style.display = 'none';
+            document.getElementById('loadingSection').classList.add('show');
+            
+            const nearestStation = findNearestStation(userLocation.lat, userLocation.lng);
+            const refNumber = 'CR-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5).toUpperCase();
+            const timestamp = new Date().toISOString();
+            
+            const crimeType = document.getElementById('crimeType').value;
+            const description = document.getElementById('description').value;
+            const contactNumber = document.getElementById('contactNumber').value || 'Anonymous';
+            
+            const dashboardData = {
+                id: Date.now(),
+                lat: userLocation.lat,
+                lng: userLocation.lng,
+                type: getCrimeTypeLabel(crimeType),
+                typeKey: mapCrimeType(crimeType),
+                color: getCrimeColor(crimeType),
+                district: nearestStation.name.replace(' Police Station', ''),
+                districtKey: getStationKey(nearestStation.name),
+                date: new Date().toISOString().split('T')[0],
+                fatalities: 0,
+                description: description,
+                contactNumber: contactNumber,
+                hasMedia: selectedFile !== null,
+                mediaType: selectedFile ? (selectedFile.type.startsWith('image/') ? 'image' : 'video') : null,
+                mediaName: selectedFile ? selectedFile.name : null,
+                referenceNumber: refNumber,
+                timestamp: timestamp,
+                station: nearestStation.name,
+                commander: nearestStation.commander,
+                phone: nearestStation.phone,
+                status: 'pending'
+            };
+            
+            setTimeout(function() {
+                try {
+                    // Get existing reports
+                    const dashboardCrimes = JSON.parse(localStorage.getItem('dashboardCrimes') || '[]');
+                    
+                    // Add new report
+                    dashboardCrimes.push(dashboardData);
+                    
+                    // Save back to localStorage
+                    localStorage.setItem('dashboardCrimes', JSON.stringify(dashboardCrimes));
+                    
+                    console.log('Report saved successfully!');
+                    console.log('Total reports in storage:', dashboardCrimes.length);
+                    console.log('New report data:', dashboardData);
+                    
+                    // Show success screen
+                    document.getElementById('loadingSection').classList.remove('show');
+                    document.getElementById('successSection').classList.add('show');
+                    document.getElementById('referenceNumber').textContent = refNumber;
+                    document.getElementById('assignedStation').textContent = nearestStation.name;
+                    document.getElementById('assignedCommander').textContent = 'Commander: ' + nearestStation.commander;
+                    document.getElementById('assignedPhone').textContent = '📞 ' + nearestStation.phone;
+                    
+                    clearInterval(timerInterval);
+                } catch (error) {
+                    console.error('Error saving report:', error);
+                    alert('Error saving report: ' + error.message);
+                }
+            }, 2000);
+        });
+        
+        // Helper functions
+        function getCrimeTypeLabel(key) {
+            const types = {
+                'violence': 'Violence against civilians',
+                'assault': 'Assault',
+                'theft': 'Theft/Robbery',
+                'burglary': 'Burglary',
+                'vehicle_theft': 'Vehicle Theft',
+                'domestic_violence': 'Domestic Violence',
+                'sexual_assault': 'Sexual Assault',
+                'murder': 'Murder/Homicide',
+                'riots': 'Riot',
+                'protests': 'Protest',
+                'fire': 'Fire',
+                'accident': 'Traffic Accident',
+                'drug': 'Drug-related',
+                'vandalism': 'Vandalism',
+                'other': 'Other'
+            };
+            return types[key] || 'Other';
+        }
+        
+        function mapCrimeType(key) {
+            const mapping = {
+                'violence': 'violence',
+                'assault': 'violence',
+                'murder': 'violence',
+                'domestic_violence': 'violence',
+                'sexual_assault': 'violence',
+                'protests': 'protests',
+                'riots': 'riots',
+                'fire': 'explosions',
+                'other': 'other'
+            };
+            return mapping[key] || 'other';
+        }
+        
+        function getCrimeColor(key) {
+            const colors = {
+                'violence': '#e67e22',
+                'assault': '#e67e22',
+                'murder': '#c0392b',
+                'domestic_violence': '#e67e22',
+                'sexual_assault': '#c0392b',
+                'protests': '#9b59b6',
+                'riots': '#f1c40f',
+                'fire': '#c0392b',
+                'explosions': '#c0392b',
+                'theft': '#e67e22',
+                'burglary': '#e67e22',
+                'vehicle_theft': '#e67e22',
+                'drug': '#95a5a6',
+                'vandalism': '#95a5a6',
+                'accident': '#f39c12',
+                'other': '#95a5a6'
+            };
+            return colors[key] || '#95a5a6';
+        }
+        
+        function getStationKey(stationName) {
+            const keys = {
+                '7 Mile Police Station': '7mile',
+                'Waigani Police Station': 'waigani',
+                'Gerehu Police Station': 'gerehu',
+                'Hohola Police Station': 'hohola',
+                'Badili Police Station': 'badili',
+                'Port Moresby Town Police Station': 'pmtown',
+                '6 Mile Police Station': '6mile',
+                'Boroko Police Station': 'boroko',
+                '9 Mile Police Station': '9mile',
+                'Gordons Police Station': 'gordons'
+            };
+            return keys[stationName] || 'pm';
+        }
+        
+        function showAlert(message, type) {
+            const alert = document.getElementById('alertBanner');
+            alert.textContent = message;
+            alert.className = 'alert-banner show ' + type;
+            
+            setTimeout(function() {
+                alert.classList.remove('show');
+            }, 5000);
+        }
+        
+        // Debug function to check localStorage
+        function checkStorage() {
+            const data = localStorage.getItem('dashboardCrimes');
+            if (data) {
+                const crimes = JSON.parse(data);
+                alert(`Found ${crimes.length} reports in storage!\n\nMost recent report location:\nLat: ${crimes[crimes.length-1].lat}\nLng: ${crimes[crimes.length-1].lng}`);
+                console.log('All reports:', crimes);
+            } else {
+                alert('No reports found in localStorage');
+                console.log('localStorage is empty');
+            }
+        }
+        

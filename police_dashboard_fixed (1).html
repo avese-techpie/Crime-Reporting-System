@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NCD & Central Province Crime Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.css" />
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f5f7fa; overflow-x: hidden; }
+        #header { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        #header h1 { font-size: 28px; margin-bottom: 5px; }
+        #header p { opacity: 0.9; font-size: 14px; }
+        .toolbar { background: white; padding: 15px 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; gap: 15px; flex-wrap: wrap; align-items: center; }
+        .filter-group { display: flex; align-items: center; gap: 8px; }
+        .filter-group label { font-size: 13px; font-weight: 600; color: #555; }
+        .filter-group select, .filter-group input { padding: 8px 12px; border: 2px solid #ddd; border-radius: 5px; font-size: 13px; background: white; }
+        .btn { padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.3s; }
+        .btn-primary { background: #2a5298; color: white; }
+        .btn-primary:hover { background: #1e3c72; }
+        .btn-success { background: #27ae60; color: white; }
+        .btn-danger { background: #e74c3c; color: white; }
+        .btn-secondary { background: #f0f0f0; color: #333; }
+        .dashboard-container { display: grid; grid-template-columns: 300px 1fr 300px; gap: 15px; padding: 15px; height: calc(100vh - 200px); }
+        .left-panel, .right-panel { display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
+        .panel-card { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .card-title { font-size: 16px; font-weight: 700; margin-bottom: 15px; color: #1e3c72; border-bottom: 2px solid #e0e0e0; padding-bottom: 8px; }
+        .stat-box { text-align: center; padding: 15px; margin-bottom: 10px; }
+        .stat-number { font-size: 48px; font-weight: 700; color: #2a5298; line-height: 1; }
+        .stat-label { font-size: 14px; color: #666; margin-top: 5px; text-transform: uppercase; letter-spacing: 1px; }
+        #map-container { position: relative; height: 100%; }
+        #map { height: 100%; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .legend-box { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); position: absolute; top: 10px; right: 10px; z-index: 1000; max-width: 200px; }
+        .legend-title { font-weight: 700; font-size: 14px; margin-bottom: 10px; color: #1e3c72; }
+        .legend-item { display: flex; align-items: center; margin-bottom: 8px; font-size: 12px; }
+        .legend-color { width: 20px; height: 20px; border-radius: 3px; margin-right: 8px; }
+        .crime-bar { margin-bottom: 12px; }
+        .crime-bar-label { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; color: #333; }
+        .crime-bar-bg { height: 24px; background: #e0e0e0; border-radius: 4px; overflow: hidden; }
+        .crime-bar-fill { height: 100%; transition: width 0.5s ease; display: flex; align-items: center; padding-left: 8px; color: white; font-size: 11px; font-weight: 600; }
+        .lga-item { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #f0f0f0; font-size: 13px; cursor: pointer; }
+        .lga-item:hover { background: #f8f9fa; }
+        .recent-event { padding: 12px; border-left: 4px solid; margin-bottom: 10px; background: #f8f9fa; border-radius: 4px; font-size: 13px; cursor: pointer; transition: all 0.3s; }
+        .recent-event:hover { background: #e8f4f8; transform: translateX(3px); }
+        .recent-event.new { animation: highlight 2s ease; }
+        @keyframes highlight {
+            0%, 100% { background: #f8f9fa; }
+            50% { background: #d4edda; }
+        }
+        .event-date { font-size: 11px; color: #999; margin-bottom: 3px; }
+        .event-type { font-weight: 600; margin-bottom: 3px; }
+        .event-location { color: #666; font-size: 12px; }
+        .event-ref { font-size: 10px; color: #2a5298; font-family: 'Courier New', monospace; margin-top: 3px; }
+        .modal { display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); }
+        .modal-content { background: white; margin: 3% auto; padding: 0; border-radius: 10px; width: 90%; max-width: 700px; max-height: 90vh; overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+        .modal-header { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white; padding: 20px; border-radius: 10px 10px 0 0; display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h2 { margin: 0; font-size: 24px; }
+        .close { color: white; font-size: 35px; font-weight: bold; cursor: pointer; line-height: 1; transition: all 0.3s; }
+        .close:hover { transform: rotate(90deg); }
+        .modal-body { padding: 25px; }
+        .detail-row { margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #e0e0e0; }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-label { font-weight: 600; color: #666; font-size: 12px; text-transform: uppercase; margin-bottom: 5px; }
+        .detail-value { font-size: 14px; color: #333; }
+        .status-badge { display: inline-block; padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-investigating { background: #cce5ff; color: #004085; }
+        .status-resolved { background: #d4edda; color: #155724; }
+        .new-report-notification { position: fixed; top: 80px; right: 20px; background: #28a745; color: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 9999; animation: slideInRight 0.5s ease; }
+        @keyframes slideInRight {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>🚔 Crime Analytics Dashboard - NCD & Central Province</h1>
+        <p>Real-time crime monitoring and analysis system | Last updated: <span id="lastUpdate"></span></p>
+    </div>
+    
+    <div class="toolbar">
+        <div class="filter-group"><label>Date From:</label><input type="date" id="dateFrom"></div>
+        <div class="filter-group"><label>Date To:</label><input type="date" id="dateTo"></div>
+        <div class="filter-group">
+            <label>Crime Type:</label>
+            <select id="crimeTypeFilter">
+                <option value="all">All Types</option>
+                <option value="violence">Violence</option>
+                <option value="protests">Protests</option>
+                <option value="riots">Riots</option>
+                <option value="explosions">Explosions</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>District:</label>
+            <select id="districtFilter">
+                <option value="all">All Districts</option>
+            </select>
+        </div>
+        <button class="btn btn-primary" onclick="applyFilters()">🔍 Apply</button>
+        <button class="btn btn-secondary" onclick="resetFilters()">🔄 Reset</button>
+        <div style="flex: 1;"></div>
+        <button class="btn btn-danger" onclick="clearAllReports()">🗑️ Clear All Reports</button>
+    </div>
+    
+    <div class="dashboard-container">
+        <div class="left-panel">
+            <div class="panel-card">
+                <div class="card-title">Crime Statistics</div>
+                <div class="stat-box"><div class="stat-number" id="totalCrimes">0</div><div class="stat-label">Total Incidents</div></div>
+                <div class="stat-box" style="padding-top: 0;"><div class="stat-number" style="font-size: 36px; color: #e74c3c;" id="totalFatalities">0</div><div class="stat-label">Fatalities</div></div>
+            </div>
+            <div class="panel-card">
+                <div class="card-title">Incidents by Type</div>
+                <div id="crimeTypes"></div>
+            </div>
+            <div class="panel-card">
+                <div class="card-title">Events by District</div>
+                <div id="lgaList"></div>
+            </div>
+        </div>
+        
+        <div id="map-container">
+            <div id="map"></div>
+            <div class="legend-box">
+                <div class="legend-title">Crime Type</div>
+                <div class="legend-item"><div class="legend-color" style="background: #9b59b6;"></div><span>Protests</span></div>
+                <div class="legend-item"><div class="legend-color" style="background: #e67e22;"></div><span>Violence</span></div>
+                <div class="legend-item"><div class="legend-color" style="background: #f1c40f;"></div><span>Riots</span></div>
+                <div class="legend-item"><div class="legend-color" style="background: #e74c3c;"></div><span>Battles</span></div>
+                <div class="legend-item"><div class="legend-color" style="background: #c0392b;"></div><span>Explosions</span></div>
+                <div class="legend-item"><div class="legend-color" style="background: #95a5a6;"></div><span>Other</span></div>
+            </div>
+        </div>
+        
+        <div class="right-panel">
+            <div class="panel-card">
+                <div class="card-title">Recent Events</div>
+                <div id="recentEvents">No events to display</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="detailModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><h2>📋 Crime Report Details</h2><span class="close" onclick="closeDetailModal()">&times;</span></div>
+            <div class="modal-body" id="detailModalBody"></div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.min.js"></script>
+    <script>
+        const map = L.map('map').setView([-9.4438, 147.1803], 11);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        let allCrimeData = [];
+        let filteredCrimeData = [];
+        let markers = L.markerClusterGroup();
+        let lastReportCount = 0;
+
+        // Set default dates
+        const today = new Date();
+        const monthAgo = new Date(today);
+        monthAgo.setMonth(monthAgo.getMonth() - 1);
+        document.getElementById('dateFrom').valueAsDate = monthAgo;
+        document.getElementById('dateTo').valueAsDate = today;
+
+        // Load reports from localStorage
+        function loadReports() {
+            const storedReports = localStorage.getItem('dashboardCrimes');
+            if (storedReports) {
+                try {
+                    const reports = JSON.parse(storedReports);
+                    console.log('Loaded reports:', reports.length);
+                    
+                    // Check for new reports
+                    if (reports.length > lastReportCount) {
+                        const newCount = reports.length - lastReportCount;
+                        showNotification(`${newCount} new report(s) received!`);
+                        lastReportCount = reports.length;
+                    }
+                    
+                    allCrimeData = reports;
+                    filteredCrimeData = [...allCrimeData];
+                    updateDashboard();
+                } catch (e) {
+                    console.error('Error loading reports:', e);
+                }
+            } else {
+                console.log('No reports found in localStorage');
+            }
+        }
+
+        // Show notification
+        function showNotification(message) {
+            const notification = document.createElement('div');
+            notification.className = 'new-report-notification';
+            notification.innerHTML = `
+                <strong>🔔 New Report!</strong><br>
+                ${message}
+            `;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideInRight 0.5s ease reverse';
+                setTimeout(() => notification.remove(), 500);
+            }, 4000);
+        }
+
+        // Update all dashboard components
+        function updateDashboard() {
+            updateMapLayers();
+            updateStatistics();
+            updateCrimeTypes();
+            updateDistricts();
+            updateRecentEvents();
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleString();
+        }
+
+        // Update map markers
+        function updateMapLayers() {
+            map.removeLayer(markers);
+            markers = L.markerClusterGroup();
+            
+            filteredCrimeData.forEach(point => {
+                const markerColor = point.color || '#95a5a6';
+                const icon = L.divIcon({
+                    className: 'custom-marker',
+                    html: `<div style="background-color: ${markerColor}; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.5);"></div>`,
+                    iconSize: [12, 12]
+                });
+                
+                const marker = L.marker([point.lat, point.lng], { icon: icon })
+                    .bindPopup(`
+                        <strong>${point.type}</strong><br>
+                        <em>${point.district}</em><br>
+                        ${point.date}<br>
+                        <small>${point.referenceNumber || 'N/A'}</small><br>
+                        <button onclick="showDetails(${point.id})" style="margin-top: 5px; padding: 5px 10px; background: #2a5298; color: white; border: none; border-radius: 3px; cursor: pointer;">View Details</button>
+                    `);
+                markers.addLayer(marker);
+            });
+            
+            map.addLayer(markers);
+        }
+
+        // Update statistics
+        function updateStatistics() {
+            document.getElementById('totalCrimes').textContent = filteredCrimeData.length;
+            const totalFatalities = filteredCrimeData.reduce((sum, item) => sum + (item.fatalities || 0), 0);
+            document.getElementById('totalFatalities').textContent = totalFatalities;
+        }
+
+        // Update crime types chart
+        function updateCrimeTypes() {
+            const typeCounts = {};
+            filteredCrimeData.forEach(crime => {
+                const type = crime.typeKey || 'other';
+                typeCounts[type] = (typeCounts[type] || 0) + 1;
+            });
+
+            const typeColors = {
+                'violence': '#e67e22',
+                'protests': '#9b59b6',
+                'riots': '#f1c40f',
+                'battles': '#e74c3c',
+                'explosions': '#c0392b',
+                'other': '#95a5a6'
+            };
+
+            const maxCount = Math.max(...Object.values(typeCounts), 1);
+            let html = '';
+            
+            Object.entries(typeCounts).forEach(([type, count]) => {
+                const percentage = (count / maxCount) * 100;
+                const color = typeColors[type] || '#95a5a6';
+                const label = type.charAt(0).toUpperCase() + type.slice(1);
+                
+                html += `
+                    <div class="crime-bar">
+                        <div class="crime-bar-label">
+                            <span>${label}</span>
+                            <span>${count}</span>
+                        </div>
+                        <div class="crime-bar-bg">
+                            <div class="crime-bar-fill" style="width: ${percentage}%; background: ${color};">${count}</div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('crimeTypes').innerHTML = html || '<p style="color: #999; font-size: 13px;">No data</p>';
+        }
+
+        // Update districts
+        function updateDistricts() {
+            const districtCounts = {};
+            filteredCrimeData.forEach(crime => {
+                const district = crime.district || 'Unknown';
+                districtCounts[district] = (districtCounts[district] || 0) + 1;
+            });
+
+            // Update filter dropdown
+            const districtFilter = document.getElementById('districtFilter');
+            const currentValue = districtFilter.value;
+            districtFilter.innerHTML = '<option value="all">All Districts</option>';
+            Object.keys(districtCounts).sort().forEach(district => {
+                districtFilter.innerHTML += `<option value="${district}">${district}</option>`;
+            });
+            districtFilter.value = currentValue;
+
+            // Update district list
+            let html = '';
+            Object.entries(districtCounts)
+                .sort((a, b) => b[1] - a[1])
+                .forEach(([district, count]) => {
+                    html += `<div class="lga-item"><span>${district}</span><strong>${count}</strong></div>`;
+                });
+
+            document.getElementById('lgaList').innerHTML = html || '<p style="color: #999; font-size: 13px;">No data</p>';
+        }
+
+        // Update recent events
+        function updateRecentEvents() {
+            const recent = [...filteredCrimeData]
+                .sort((a, b) => new Date(b.timestamp || b.date) - new Date(a.timestamp || a.date))
+                .slice(0, 10);
+
+            let html = '';
+            recent.forEach((event, index) => {
+                const date = new Date(event.timestamp || event.date);
+                const isNew = index === 0 && filteredCrimeData.length > lastReportCount - 1;
+                
+                html += `
+                    <div class="recent-event ${isNew ? 'new' : ''}" style="border-left-color: ${event.color};" onclick="showDetails(${event.id})">
+                        <div class="event-date">${date.toLocaleString()}</div>
+                        <div class="event-type">${event.type}</div>
+                        <div class="event-location">📍 ${event.district}</div>
+                        <div class="event-ref">${event.referenceNumber || 'N/A'}</div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('recentEvents').innerHTML = html || '<p style="color: #999; font-size: 13px;">No events to display</p>';
+        }
+
+        // Show details modal
+        function showDetails(crimeId) {
+            const crime = allCrimeData.find(c => c.id === crimeId);
+            if (!crime) return;
+
+            const date = new Date(crime.timestamp || crime.date);
+            
+            let html = `
+                <div class="detail-row">
+                    <div class="detail-label">Reference Number</div>
+                    <div class="detail-value" style="font-family: 'Courier New', monospace; font-weight: 600; color: #2a5298;">${crime.referenceNumber || 'N/A'}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Status</div>
+                    <div class="detail-value"><span class="status-badge status-${crime.status || 'pending'}">${crime.status || 'pending'}</span></div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Date & Time</div>
+                    <div class="detail-value">${date.toLocaleString()}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Crime Type</div>
+                    <div class="detail-value">${crime.type}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Location</div>
+                    <div class="detail-value">${crime.district}<br><small style="color: #666;">Lat: ${crime.lat.toFixed(6)}, Lng: ${crime.lng.toFixed(6)}</small></div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Description</div>
+                    <div class="detail-value">${crime.description || 'No description provided'}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Contact Number</div>
+                    <div class="detail-value">${crime.contactNumber || 'Anonymous'}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Media Attached</div>
+                    <div class="detail-value">${crime.hasMedia ? `Yes (${crime.mediaType || 'unknown'} - ${crime.mediaName || 'N/A'})` : 'No'}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Assigned Station</div>
+                    <div class="detail-value">
+                        ${crime.station || 'N/A'}<br>
+                        <small style="color: #666;">Commander: ${crime.commander || 'N/A'}</small><br>
+                        <small style="color: #666;">📞 ${crime.phone || 'N/A'}</small>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('detailModalBody').innerHTML = html;
+            document.getElementById('detailModal').style.display = 'block';
+        }
+
+        function closeDetailModal() {
+            document.getElementById('detailModal').style.display = 'none';
+        }
+
+        // Apply filters
+        function applyFilters() {
+            const dateFrom = new Date(document.getElementById('dateFrom').value);
+            const dateTo = new Date(document.getElementById('dateTo').value);
+            dateTo.setHours(23, 59, 59);
+            
+            const crimeType = document.getElementById('crimeTypeFilter').value;
+            const district = document.getElementById('districtFilter').value;
+
+            filteredCrimeData = allCrimeData.filter(crime => {
+                const crimeDate = new Date(crime.date || crime.timestamp);
+                const matchesDate = crimeDate >= dateFrom && crimeDate <= dateTo;
+                const matchesType = crimeType === 'all' || crime.typeKey === crimeType;
+                const matchesDistrict = district === 'all' || crime.district === district;
+                
+                return matchesDate && matchesType && matchesDistrict;
+            });
+
+            updateDashboard();
+        }
+
+        function resetFilters() {
+            const today = new Date();
+            const monthAgo = new Date(today);
+            monthAgo.setMonth(monthAgo.getMonth() - 1);
+            document.getElementById('dateFrom').valueAsDate = monthAgo;
+            document.getElementById('dateTo').valueAsDate = today;
+            document.getElementById('crimeTypeFilter').value = 'all';
+            document.getElementById('districtFilter').value = 'all';
+            
+            filteredCrimeData = [...allCrimeData];
+            updateDashboard();
+        }
+
+        function clearAllReports() {
+            if (confirm('Are you sure you want to clear all reports? This cannot be undone.')) {
+                localStorage.removeItem('dashboardCrimes');
+                allCrimeData = [];
+                filteredCrimeData = [];
+                lastReportCount = 0;
+                updateDashboard();
+                alert('All reports have been cleared.');
+            }
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('detailModal');
+            if (event.target == modal) {
+                closeDetailModal();
+            }
+        }
+
+        // Initial load and auto-refresh every 5 seconds
+        loadReports();
+        setInterval(loadReports, 5000);
+    </script>
+</body>
+</html>
